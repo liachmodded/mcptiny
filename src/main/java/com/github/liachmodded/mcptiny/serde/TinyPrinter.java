@@ -43,6 +43,7 @@ public final class TinyPrinter {
   public static void print(PrintWriter out, TinyTree tree) {
     final List<String> namespaces = tree.getMetadata().getNamespaces();
     final String defaultNamespace = namespaces.get(0);
+    out.printf("tiny\t2\t0\t%s\n", String.join("\t", namespaces));
     for (ClassDef clazz : tree.getClasses()) {
       out.printf("c\t%s\n", collectNames(namespaces, clazz));
       printComment(out, clazz, 1);

@@ -59,10 +59,6 @@ public class McpTiny implements Plugin<Project> {
     target.getExtensions().create("mcptiny", McpTinyExtension.class);
 
     target.afterEvaluate(project -> {
-      if (project.getPluginManager().hasPlugin("fabric-loom")) {
-        throw new UnsupportedOperationException("This plugin requires fabric loom!");
-      }
-
       RepositoryHandler repositories = project.getRepositories();
       repositories.maven(repo -> {
         repo.setName("forge");
@@ -79,9 +75,9 @@ public class McpTiny implements Plugin<Project> {
       McpTinyExtension mcpTinyExtension = project.getConvention().getByType(McpTinyExtension.class);
       String mcpVersion = mcpTinyExtension.mcpVersion;
 
-      String srgNotation = String.format("de.oceanlabs.mcp:mcp_config:$1%s-+", mcVersion);
-      String mcpNotation = String.format("de.oceanlabs.mcp:mcp_snapshot:$1%s", mcpVersion);
-      String intNotation = String.format("net.fabricmc:intermediary:$1%s:v2", mcVersion);
+      String srgNotation = String.format("de.oceanlabs.mcp:mcp_config:%s-+@zip", mcVersion);
+      String mcpNotation = String.format("de.oceanlabs.mcp:mcp_snapshot:%s@zip", mcpVersion);
+      String intNotation = String.format("net.fabricmc:intermediary:%s:v2", mcVersion);
 
       DependencyHandler dependencies = project.getDependencies();
       Dependency srgDep = dependencies.create(srgNotation);
@@ -161,7 +157,7 @@ public class McpTiny implements Plugin<Project> {
   }
 
   private void packTiny(Project project, McpTree tree, File target) {
-    File dir = new File(project.getBuildDir(), "temp");
+    File dir = new File(project.getBuildDir(), "tmp");
     File tmpFile = new File(dir, "mcp-tmp.tiny");
     try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(tmpFile.toPath()))) {
       TinyPrinter.print(writer, tree);

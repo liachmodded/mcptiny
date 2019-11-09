@@ -26,15 +26,15 @@
  */
 package com.github.liachmodded.mcptiny.model;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.mapping.reader.v2.TinyMetadata;
-import org.gradle.internal.impldep.com.google.common.collect.ImmutableList;
 
 final class Metadata implements TinyMetadata {
 
-  private static final List<String> NAMESPACES = ImmutableList.of("official", "intermediary", "named");
+  private static final List<String> NAMESPACES = Collections.unmodifiableList(Arrays.asList("official", "intermediary", "named"));
 
   @Override
   public int getMajorVersion() {

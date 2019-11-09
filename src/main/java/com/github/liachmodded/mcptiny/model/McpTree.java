@@ -32,6 +32,7 @@ import java.util.TreeMap;
 import net.fabricmc.mapping.reader.v2.TinyMetadata;
 import net.fabricmc.mapping.tree.ClassDef;
 import net.fabricmc.mapping.tree.TinyTree;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class McpTree implements TinyTree {
 
@@ -39,8 +40,8 @@ public final class McpTree implements TinyTree {
   private final Map<String, McpClass> obfMap = new TreeMap<>();
   private final Map<String, McpClass> srgMap = new TreeMap<>();
 
-  private final Map<String, McpField> fieldMap = new TreeMap<>(); // 123456 -> xx
-  private final Map<String, McpMethod> methodMap = new TreeMap<>(); // 123456 -> xx; i2345 -> xx
+  private final Map<String, McpField> fieldMap = new TreeMap<>(); // field_123456 -> xx; a -> RED
+  private final Map<String, McpMethod> methodMap = new TreeMap<>(); // func_123456 -> xx; func_i2345 -> xx; equals -> equals
 
   public McpClass makeClass(String obf, String srg) {
     McpClass created = new McpClass(obf, srg);
@@ -49,36 +50,65 @@ public final class McpTree implements TinyTree {
     return created;
   }
 
-  public McpField makeField(McpClass parent, String obf, String srg, String desc) {
+  public McpField makeField(McpClass parent, String obf, String desc, String srg) {
     McpField created = new McpField(obf, srg, desc);
-    String[] parts = srg.split("_");
-    fieldMap.put(parts[1], created);
+    fieldMap.put(fixName(srg), created);
     parent.getMcpFields().add(created);
     return created;
   }
 
-  public McpMethod makeMethod(McpClass parent, String obf, String srg, String desc) {
+  public McpMethod makeMethod(McpClass parent, String obf, String desc, String srg) {
     McpMethod created = new McpMethod(obf, srg, desc);
-    String[] parts = srg.split("_");
-    methodMap.put(parts[1], created);
+    methodMap.put(fixName(srg), created);
     parent.getMcpMethods().add(created);
     return created;
   }
-  
+
+  private McpClass getMcpClass(String notation) {
+    McpClass parent = srgMap.get(notation);
+    if (parent != null) {
+      return parent;
+    }
+
+    @Nullable McpClass current = null;
+    int t = notation.lastIndexOf('$');
+    while (t != -1) {
+      current = srgMap.get(notation.substring(0, t));
+      if (current != null) {
+        break;
+      }
+      t = notation.lastIndexOf('$', t - 1);
+    }
+
+    if (current == null) {
+      throw new IllegalArgumentException("Nonexistent class " + notation);
+    }
+
+    do {
+      int start = t;
+      t = notation.indexOf('$', t + 1);
+      if (t < 0) {
+        t = notation.length();
+      }
+      McpClass created = makeClass(current.getObf() + "$" + notation.substring(start + 1, t),
+          current.getSrg() + "$" + notation.substring(start + 1, t));
+      current = created;
+    } while (t != notation.length());
+
+    return current;
+  }
+
   public McpMethod makeConstructor(String index, String owner, String desc) {
-    McpClass parent = srgMap.get(owner);
-    if (parent == null)
-      throw new IllegalArgumentException("Nonexistent class " + owner);
-    
+    McpClass parent = getMcpClass(owner);
+
     McpMethod created = new McpMethod("<init>", "<init>", desc);
-    methodMap.put("i" + index, created);
+    methodMap.put("func_i" + index, created);
     parent.getMcpMethods().add(created);
     return created;
   }
 
   public McpField findField(String srg) {
-    String[] parts = srg.split("_");
-    McpField ret = fieldMap.get(parts[1]);
+    McpField ret = fieldMap.get(fixName(srg));
     if (ret == null) {
       throw new IllegalArgumentException("field " + srg + " does not exist");
     }
@@ -86,18 +116,17 @@ public final class McpTree implements TinyTree {
   }
 
   public McpMethod findMethod(String srg) {
-    String[] parts = srg.split("_");
-    McpMethod ret = methodMap.get(parts[1]);
+    McpMethod ret = methodMap.get(fixName(srg));
     if (ret == null) {
       throw new IllegalArgumentException("method " + srg + " does not exist");
     }
     return ret;
   }
 
-  private McpMethod findMethodInternal(String key) {
-    McpMethod ret = methodMap.get(key);
+  private McpMethod findMethodInternal(String index) {
+    McpMethod ret = methodMap.get("func_" + index);
     if (ret == null) {
-      throw new IllegalArgumentException("method with id " + key + " does not exist");
+      throw new IllegalArgumentException("method with id " + index + " does not exist");
     }
     return ret;
   }
@@ -111,6 +140,14 @@ public final class McpTree implements TinyTree {
     McpParam created = new McpParam(index, srg);
     method.getMcpParams().put(index, created);
     return created;
+  }
+
+  private String fixName(String original) {
+    String[] parts = original.split("_", 3);
+    if (parts.length >= 2) {
+      return parts[0] + "_" + parts[1];
+    }
+    return parts[0];
   }
 
   public Map<String, McpClass> getObfMap() {

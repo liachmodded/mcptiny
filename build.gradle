@@ -3,6 +3,7 @@ plugins {
     id 'maven-publish'
     id 'com.jfrog.bintray' version '1.8.4'
     id 'net.minecrell.licenser' version '0.4.1'
+    id 'com.github.johnrengelman.shadow' version '5.1.0'
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8
@@ -25,15 +26,24 @@ repositories {
     gradlePluginPortal()
 }
 
+configurations {
+    ship
+    implementation.extendsFrom ship
+}
+
 dependencies {
     implementation gradleApi()
     compileOnly "org.checkerframework:checker-qual:2.11.0"
     implementation "net.fabricmc:fabric-loom:${project.loomVersion}"
-    implementation "net.fabricmc:tiny-mappings-parser:0.2.0.11"
-    implementation "org.apache.commons:commons-csv:1.7"
+    ship "net.fabricmc:tiny-mappings-parser:0.2.0.11"
+    ship "org.apache.commons:commons-csv:1.7"
 }
 
 sourceSets {
+}
+
+shadowJar {
+    configurations = [project.configurations.ship]
 }
 
 license {
@@ -86,6 +96,7 @@ artifacts {
     archives jar
     archives sourcesJar
     archives javadocsJar
+    archives shadowJar
 }
 
 bintray {
@@ -142,6 +153,7 @@ publishing {
             artifact jar
             artifact sourcesJar
             artifact javadocsJar
+            artifact shadowJar
         }
     }
 }
