@@ -1,0 +1,151 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'com.jfrog.bintray' version '1.8.4'
+    id 'net.minecrell.licenser' version '0.4.1'
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+if (isNullOrEmpty(System.getenv("TRAVIS_TAG")) && !isNullOrEmpty(System.getenv('TRAVIS_BUILD_NUMBER'))) {
+    version = project.modVersion + '.' + System.getenv('TRAVIS_BUILD_NUMBER')
+} else {
+    version = project.modVersion
+}
+logger.lifecycle("${project.repoName} version ${project.version}")
+group = project.mavenGroup
+
+repositories {
+    jcenter()
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    gradlePluginPortal()
+}
+
+dependencies {
+    implementation gradleApi()
+    compileOnly "org.checkerframework:checker-qual:2.11.0"
+    implementation "net.fabricmc:fabric-loom:${project.loomVersion}"
+    implementation "net.fabricmc:tiny-mappings-parser:0.2.0.11"
+    implementation "org.apache.commons:commons-csv:1.7"
+}
+
+sourceSets {
+}
+
+license {
+    header = file('HEADER.txt')
+    include '**/*.java'
+    style.java = 'BLOCK_COMMENT'
+    newLine = false
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType(Javadoc) {
+    options.encoding = 'UTF-8'
+    options.charSet = 'UTF-8'
+    options.links(
+            'https://google.github.io/guava/releases/21.0/api/docs/',
+            'https://docs.oracle.com/javase/8/docs/api/',
+            'https://logging.apache.org/log4j/2.x/log4j-api/apidocs/',
+            'https://docs.gradle.org/5.6.3/javadoc/'
+    )
+
+    // Disable the crazy super-strict doclint tool in Java 8
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+processResources {
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = "sources"
+    from sourceSets.main.allSource
+}
+
+task javadocs(type: Javadoc) {
+    source = sourceSets.main.allJava
+}
+
+task javadocsJar(type: Jar, dependsOn: javadocs) {
+    classifier = "javadocs"
+    from javadocs.destinationDir
+}
+
+jar {
+    from "LICENSE"
+}
+
+artifacts {
+    archives jar
+    archives sourcesJar
+    archives javadocsJar
+}
+
+bintray {
+    user = project.hasProperty('bintrayUser') ? project.getProperty('bintrayUser') : System.getenv('bintray_user')
+    key = project.hasProperty('bintrayKey') ? project.getProperty('bintrayKey') : System.getenv('bintray_key')
+    publish = true
+    override = true
+    publications = ['mavenJava']
+    pkg {
+        repo = project.bintrayRepo
+        name = project.name
+        user = bintray.user
+        userOrg = project.repoOwner
+        licenses = [project.codeLicense]
+        desc = project.description
+        websiteUrl = "https://github.com/${project.repoOwner}/${project.repoName}"
+        issueTrackerUrl = "https://github.com/${project.repoOwner}/${project.repoName}/issues"
+        vcsUrl = "https://github.com/${project.repoOwner}/${project.repoName}.git"
+        publicDownloadNumbers = true
+
+        githubRepo = "${project.repoOwner}/${project.repoName}"
+        version {
+            name = project.version
+            released = new Date()
+            if (!isNullOrEmpty(System.getenv("TRAVIS_TAG"))) {
+                vcsTag = System.getenv("TRAVIS_TAG")
+            } else {
+                vcsTag = ''
+            }
+        }
+    }
+}
+
+// configure the maven publication
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            pom {
+                name = project.name
+                description = project.description
+                url = "https://github.com/${project.repoOwner}/${project.repoName}"
+                licenses {
+                    license {
+                        name = project.codeLicense
+                    }
+                }
+
+                scm {
+                    url = "https://github.com/${project.repoOwner}/${project.repoName}"
+                }
+            }
+
+            // add all the jars that should be included when publishing to maven
+            artifact jar
+            artifact sourcesJar
+            artifact javadocsJar
+        }
+    }
+}
+
+static boolean isNullOrEmpty(String st) {
+    return st == null || st.isEmpty()
+}
