@@ -26,14 +26,21 @@
  */
 package com.github.liachmodded.mcptiny;
 
+import org.gradle.api.Project;
+import org.gradle.api.artifacts.Dependency;
+
 public class McpTinyExtension {
 
-  String mcpVersion = "";
+  private final Project project;
+  private final McpTiny plugin;
 
-  public McpTinyExtension() {}
+  public McpTinyExtension(Project project, McpTiny plugin) {
+    this.project = project;
+    this.plugin = plugin;
+  }
 
-  public void setMcpVersion(String mcpVersion) {
-    this.mcpVersion = mcpVersion;
+  public Dependency makeMcpDependency(String mcVersion, String mcpVersion) {
+    return plugin.makeDependency(project, mcVersion, mcpVersion);
   }
 //    http://export.mcpbot.bspk.rs/mcp_snapshot_nodoc/20191108-1.14.3/mcp_snapshot_nodoc-20191108-1.14.3.zip
 //    http://export.mcpbot.bspk.rs/mcp_snapshot/20191108-1.14.3/mcp_snapshot-20191108-1.14.3.zip

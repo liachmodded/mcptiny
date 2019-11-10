@@ -42,74 +42,69 @@ import java.util.Collections;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import net.fabricmc.loom.LoomGradleExtension;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.artifacts.ModuleIdentifier;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.file.FileTree;
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier;
+import org.gradle.api.internal.artifacts.dependencies.DefaultSelfResolvingDependency;
+import org.gradle.api.internal.file.FileCollectionInternal;
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
 
 public class McpTiny implements Plugin<Project> {
 
-  // apply me before loom!
-
   @Override
   public void apply(Project target) {
-    target.getExtensions().create("mcptiny", McpTinyExtension.class);
+    target.getExtensions().create("mcptiny", McpTinyExtension.class, target, this);
+  }
 
-    target.afterEvaluate(project -> {
-      RepositoryHandler repositories = project.getRepositories();
-      repositories.maven(repo -> {
-        repo.setName("forge");
-        repo.setUrl(project.uri("https://files.minecraftforge.net/maven/"));
-      });
-      repositories.maven(repo -> {
-        repo.setName("fabricintermediary");
-        repo.setUrl(project.uri("https://maven.fabricmc.net"));
-      });
-
-      LoomGradleExtension loomExtension = project.getConvention().getByType(LoomGradleExtension.class);
-      String mcVersion = loomExtension.getMinecraftProvider().minecraftVersion;
-
-      McpTinyExtension mcpTinyExtension = project.getConvention().getByType(McpTinyExtension.class);
-      String mcpVersion = mcpTinyExtension.mcpVersion;
-
-      if (mcpVersion == null || mcpVersion.isEmpty()) {
-        throw new IllegalArgumentException("Inalid MCP version \"" + mcpVersion + "\"!");
-      }
-
-      String srgNotation = String.format("de.oceanlabs.mcp:mcp_config:%s-+@zip", mcVersion);
-      String mcpNotation = String.format("de.oceanlabs.mcp:mcp_snapshot:%s@zip", mcpVersion);
-      String intNotation = String.format("net.fabricmc:intermediary:%s:v2", mcVersion);
-
-      DependencyHandler dependencies = project.getDependencies();
-      Dependency srgDep = dependencies.create(srgNotation);
-      Dependency mcpDep = dependencies.create(mcpNotation);
-      Dependency intDep = dependencies.create(intNotation);
-
-      ConfigurationContainer configurations = project.getConfigurations();
-      Configuration srgConfig = configurations.detachedConfiguration(srgDep);
-      Configuration mcpConfig = configurations.detachedConfiguration(mcpDep);
-      Configuration intConfig = configurations.detachedConfiguration(intDep);
-
-      File srgZip = srgConfig.getSingleFile();
-      File mcpZip = mcpConfig.getSingleFile();
-      File intJar = intConfig.getSingleFile();
-
-      // handle srg and mcp zips!
-      McpTree tree = handleSrgZip(project, srgZip);
-      applyIntermediary(project, tree, intJar);
-      handleMcpZip(project, tree, mcpZip);
-
-      File resultTinyJar = new File(project.getBuildDir(), "mcp-mappings-tiny-v2.jar");
-      packTiny(project, tree, resultTinyJar);
-
-      System.err.printf("Tiny jar built, ready at \"%s\".", resultTinyJar);
-      //dependencies.add(Constants.MAPPINGS, project.files(resultTinyJar));
+  Dependency makeDependency(Project project, String mcVersion, String mcpVersion) {
+    RepositoryHandler repositories = project.getRepositories();
+    repositories.maven(repo -> {
+      repo.setName("forge");
+      repo.setUrl(project.uri("https://files.minecraftforge.net/maven/"));
     });
+    repositories.maven(repo -> {
+      repo.setName("fabricintermediary");
+      repo.setUrl(project.uri("https://maven.fabricmc.net"));
+    });
+
+    String srgNotation = String.format("de.oceanlabs.mcp:mcp_config:%s-+@zip", mcVersion);
+    String mcpNotation = String.format("de.oceanlabs.mcp:mcp_snapshot:%s@zip", mcpVersion);
+    String intNotation = String.format("net.fabricmc:intermediary:%s:v2", mcVersion);
+
+    DependencyHandler dependencies = project.getDependencies();
+    Dependency srgDep = dependencies.create(srgNotation);
+    Dependency mcpDep = dependencies.create(mcpNotation);
+    Dependency intDep = dependencies.create(intNotation);
+
+    ConfigurationContainer configurations = project.getConfigurations();
+    Configuration srgConfig = configurations.detachedConfiguration(srgDep);
+    Configuration mcpConfig = configurations.detachedConfiguration(mcpDep);
+    Configuration intConfig = configurations.detachedConfiguration(intDep);
+
+    File srgZip = srgConfig.getSingleFile();
+    File mcpZip = mcpConfig.getSingleFile();
+    File intJar = intConfig.getSingleFile();
+
+    // handle srg and mcp zips!
+    McpTree tree = handleSrgZip(project, srgZip);
+    applyIntermediary(project, tree, intJar);
+    handleMcpZip(project, tree, mcpZip);
+
+    File resultTinyJar = new File(project.getBuildDir(), "mcp-mappings-tiny-v2.jar");
+    packTiny(project, tree, resultTinyJar);
+
+    System.err.printf("Tiny jar built, ready at \"%s\".", resultTinyJar);
+
+    ModuleIdentifier moduleIdentifier = DefaultModuleIdentifier.newId("de.oceanlabs.mcp", "mcp_snapshot");
+    return new DefaultSelfResolvingDependency(new DefaultModuleComponentIdentifier(moduleIdentifier, mcpVersion),
+        (FileCollectionInternal) project.files(resultTinyJar));
   }
 
   private McpTree handleSrgZip(Project project, File srgZip) {
