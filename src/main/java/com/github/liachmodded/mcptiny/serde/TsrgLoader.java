@@ -64,7 +64,7 @@ public final class TsrgLoader {
                 break;
               case 3: // method
                 if (!Objects.equals(parts[0], parts[2])) {
-                  tree.makeMethod(last, parts[0], parts[1], parts[2]);
+                  tree.makeOrGetMethod(last, parts[0], parts[1], parts[2]);
                 }
                 break;
               default:

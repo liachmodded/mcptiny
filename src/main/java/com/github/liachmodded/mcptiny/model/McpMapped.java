@@ -26,17 +26,19 @@
  */
 package com.github.liachmodded.mcptiny.model;
 
+import java.util.Objects;
 import net.fabricmc.mapping.tree.Mapped;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class McpMapped implements Mapped {
-  
+
   private final String obf;
   private final String srg;
+  private @MonotonicNonNull String intermediary;
   private @MonotonicNonNull String mcp;
   private @Nullable String comment;
-  
+
   McpMapped(String obf, String srg) {
     this.obf = obf;
     this.srg = srg;
@@ -48,11 +50,17 @@ abstract class McpMapped implements Mapped {
       case "official":
         return obf;
       case "intermediary":
+        return getIntermediaryChecked();
+      case "searge":
         return srg;
       case "named":
         return getMcp();
     }
     throw new UnsupportedOperationException("Unknown namespace " + s);
+  }
+
+  protected String getIntermediaryChecked() {
+    return Objects.requireNonNull(intermediary);
   }
 
   public String getObf() {
@@ -63,16 +71,20 @@ abstract class McpMapped implements Mapped {
     return srg;
   }
 
+  public @Nullable String getIntermediary() {
+    return intermediary;
+  }
+
+  public void setIntermediary(String intermediary) {
+    this.intermediary = intermediary;
+  }
+
   public String getMcp() {
     return mcp == null ? srg : mcp;
   }
-  
+
   public void setMcp(String mcp) {
     this.mcp = mcp;
-  }
-
-  public void setComment(String comment) {
-    this.comment = comment;
   }
 
   @Override
@@ -83,5 +95,9 @@ abstract class McpMapped implements Mapped {
   @Override
   public @Nullable String getComment() {
     return comment;
+  }
+
+  public void setComment(String comment) {
+    this.comment = comment;
   }
 }

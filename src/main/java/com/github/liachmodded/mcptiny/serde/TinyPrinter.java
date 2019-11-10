@@ -40,8 +40,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class TinyPrinter {
 
+  private TinyPrinter() {}
+
   public static void print(PrintWriter out, TinyTree tree) {
     final List<String> namespaces = tree.getMetadata().getNamespaces();
+    print(out, tree, namespaces);
+  }
+
+  public static void print(PrintWriter out, TinyTree tree, List<String> namespaces) {
     final String defaultNamespace = namespaces.get(0);
     out.printf("tiny\t2\t0\t%s\n", String.join("\t", namespaces));
     for (ClassDef clazz : tree.getClasses()) {
@@ -88,7 +94,5 @@ public final class TinyPrinter {
     sb.append(comment);
     stream.println(sb);
   }
-
-  private TinyPrinter() {}
 
 }

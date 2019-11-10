@@ -33,7 +33,7 @@ import net.fabricmc.mapping.tree.FieldDef;
 import net.fabricmc.mapping.tree.MethodDef;
 
 public final class McpClass extends McpMapped implements ClassDef {
-  
+
   private final Collection<McpField> mcpFields = new ArrayList<>();
   private final Collection<McpMethod> mcpMethods = new ArrayList<>();
 

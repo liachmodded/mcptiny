@@ -28,41 +28,57 @@ package com.github.liachmodded.mcptiny.serde;
 
 import com.github.liachmodded.mcptiny.model.McpClass;
 import com.github.liachmodded.mcptiny.model.McpField;
+import com.github.liachmodded.mcptiny.model.McpMethod;
 import com.github.liachmodded.mcptiny.model.McpTree;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import net.fabricmc.mapping.tree.ClassDef;
 import net.fabricmc.mapping.tree.FieldDef;
+import net.fabricmc.mapping.tree.MethodDef;
 import net.fabricmc.mapping.tree.TinyMappingFactory;
 import net.fabricmc.mapping.tree.TinyTree;
 
-public final class FieldDescFixer {
+public final class IntermediaryWorker {
 
-  public static void fixFieldDesc(McpTree mcpTree, File intV2File) {
+  private IntermediaryWorker() {}
+
+  public static void addIntermediaryAndFixFieldDesc(McpTree mcpTree, File intV2File) {
     try (BufferedReader reader = Files.newBufferedReader(intV2File.toPath())) {
       TinyTree tree = TinyMappingFactory.load(reader);
       Map<String, ClassDef> defaultDefs = tree.getDefaultNamespaceClassMap();
 
-      for (Entry<String, McpClass> entry : mcpTree.getObfMap().entrySet()) {
+      Iterator<Entry<String, McpClass>> iterator = mcpTree.getObfMap().entrySet().iterator();
+      while (iterator.hasNext()) {
+        final Entry<String, McpClass> entry = iterator.next();
         String key = entry.getKey();
         McpClass mcpClass = entry.getValue();
 
         ClassDef classDef = defaultDefs.get(key);
         if (classDef == null) {
-          continue;
+          if (key.indexOf('$') != -1) {
+            // broken inner class ctor etc
+            iterator.remove();
+            mcpTree.getSrgMap().remove(mcpClass.getSrg());
+            continue;
+          }
+          throw new RuntimeException("Failed to update intermediary for class " + mcpClass.getSrg());
         }
+
+        mcpClass.setIntermediary(classDef.getName("intermediary"));
 
         for (McpField mcpField : mcpClass.getMcpFields()) {
           String obf = mcpField.getObf();
           boolean descUpdated = false;
           for (FieldDef fieldDef : classDef.getFields()) {
             if (Objects.equals(fieldDef.getName("official"), obf)) {
+              mcpField.setIntermediary(fieldDef.getName("intermediary"));
               mcpField.setObfDesc(fieldDef.getDescriptor("official"));
               descUpdated = true;
               break;
@@ -70,7 +86,25 @@ public final class FieldDescFixer {
           }
 
           if (!descUpdated) {
-            throw new RuntimeException("Failed to update desc for field " + mcpField.getSrg());
+            throw new RuntimeException("Failed to update intermediary and desc for field " + mcpField.getSrg());
+          }
+        }
+
+        for (McpMethod mcpMethod : mcpClass.getMcpMethods()) {
+          String obf = mcpMethod.getObf();
+          if (Objects.equals("<init>", obf) || Objects.equals("<clinit>", obf)) {
+            mcpMethod.setIntermediary(obf);
+            continue; // skip initializers
+          }
+          if (mcpMethod.getIntermediary() != null) {
+            continue; // inherited etc
+          }
+
+          for (MethodDef fieldDef : classDef.getMethods()) {
+            if (Objects.equals(fieldDef.getName("official"), obf)) {
+              mcpMethod.setIntermediary(fieldDef.getName("intermediary"));
+              break;
+            }
           }
         }
       }
@@ -78,6 +112,4 @@ public final class FieldDescFixer {
       throw new UncheckedIOException(ex);
     }
   }
-
-  private FieldDescFixer() {}
 }

@@ -27,7 +27,7 @@
 package com.github.liachmodded.mcptiny;
 
 import com.github.liachmodded.mcptiny.model.McpTree;
-import com.github.liachmodded.mcptiny.serde.FieldDescFixer;
+import com.github.liachmodded.mcptiny.serde.IntermediaryWorker;
 import com.github.liachmodded.mcptiny.serde.TinyPrinter;
 import com.github.liachmodded.mcptiny.serde.TsrgLoader;
 import java.io.BufferedOutputStream;
@@ -37,10 +37,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import net.fabricmc.loom.LoomGradleExtension;
-import net.fabricmc.loom.util.Constants;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -75,6 +77,10 @@ public class McpTiny implements Plugin<Project> {
       McpTinyExtension mcpTinyExtension = project.getConvention().getByType(McpTinyExtension.class);
       String mcpVersion = mcpTinyExtension.mcpVersion;
 
+      if (mcpVersion == null || mcpVersion.isEmpty()) {
+        throw new IllegalArgumentException("Inalid MCP version \"" + mcpVersion + "\"!");
+      }
+
       String srgNotation = String.format("de.oceanlabs.mcp:mcp_config:%s-+@zip", mcVersion);
       String mcpNotation = String.format("de.oceanlabs.mcp:mcp_snapshot:%s@zip", mcpVersion);
       String intNotation = String.format("net.fabricmc:intermediary:%s:v2", mcVersion);
@@ -95,12 +101,14 @@ public class McpTiny implements Plugin<Project> {
 
       // handle srg and mcp zips!
       McpTree tree = handleSrgZip(project, srgZip);
-      fixFieldDesc(project, tree, intJar);
+      applyIntermediary(project, tree, intJar);
       handleMcpZip(project, tree, mcpZip);
 
       File resultTinyJar = new File(project.getBuildDir(), "mcp-mappings-tiny-v2.jar");
       packTiny(project, tree, resultTinyJar);
-      dependencies.add(Constants.MAPPINGS, resultTinyJar);
+
+      System.err.printf("Tiny jar built, ready at \"%s\".", resultTinyJar);
+      //dependencies.add(Constants.MAPPINGS, project.files(resultTinyJar));
     });
   }
 
@@ -127,14 +135,14 @@ public class McpTiny implements Plugin<Project> {
     return mcpTree;
   }
 
-  private void fixFieldDesc(Project project, McpTree tree, File intJar) {
+  private void applyIntermediary(Project project, McpTree tree, File intJar) {
     FileTree fileTree = project.zipTree(intJar);
 
     File mappingsTiny = fileTree.matching(patternFilterable -> {
       patternFilterable.include("mappings/mappings.tiny");
     }).getSingleFile();
 
-    FieldDescFixer.fixFieldDesc(tree, mappingsTiny);
+    IntermediaryWorker.addIntermediaryAndFixFieldDesc(tree, mappingsTiny);
   }
 
   private void handleMcpZip(Project project, McpTree tree, File srgZip) {
@@ -158,9 +166,11 @@ public class McpTiny implements Plugin<Project> {
 
   private void packTiny(Project project, McpTree tree, File target) {
     File dir = new File(project.getBuildDir(), "tmp");
+    dir.mkdirs();
     File tmpFile = new File(dir, "mcp-tmp.tiny");
+    List<String> namespaces = Collections.unmodifiableList(Arrays.asList("official", "intermediary", "named"));
     try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(tmpFile.toPath()))) {
-      TinyPrinter.print(writer, tree);
+      TinyPrinter.print(writer, tree, namespaces);
     } catch (IOException ex) {
       throw new UncheckedIOException(ex);
     }

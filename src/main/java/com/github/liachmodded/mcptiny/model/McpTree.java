@@ -57,11 +57,10 @@ public final class McpTree implements TinyTree {
     return created;
   }
 
-  public McpMethod makeMethod(McpClass parent, String obf, String desc, String srg) {
-    McpMethod created = new McpMethod(obf, srg, desc);
-    methodMap.put(fixName(srg), created);
-    parent.getMcpMethods().add(created);
-    return created;
+  public McpMethod makeOrGetMethod(McpClass parent, String obf, String desc, String srg) {
+    McpMethod ret = methodMap.computeIfAbsent(fixName(srg), s -> new McpMethod(obf, srg, desc));
+    parent.getMcpMethods().add(ret);
+    return ret;
   }
 
   private McpClass getMcpClass(String notation) {

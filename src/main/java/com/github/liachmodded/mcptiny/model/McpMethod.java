@@ -28,7 +28,6 @@ package com.github.liachmodded.mcptiny.model;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import net.fabricmc.mapping.tree.LocalVariableDef;

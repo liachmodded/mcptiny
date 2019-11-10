@@ -27,9 +27,10 @@
 package com.github.liachmodded.mcptiny.model;
 
 import net.fabricmc.mapping.tree.ParameterDef;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class McpParam extends McpMapped implements ParameterDef {
-  
+
   private final int index;
 
   public McpParam(int index, String srg) {
@@ -40,5 +41,11 @@ public final class McpParam extends McpMapped implements ParameterDef {
   @Override
   public int getLocalVariableIndex() {
     return index;
+  }
+
+  @Override
+  protected String getIntermediaryChecked() {
+    @Nullable String intermediary = getIntermediary();
+    return intermediary == null ? "" : intermediary;
   }
 }

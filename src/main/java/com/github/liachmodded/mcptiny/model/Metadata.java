@@ -34,7 +34,7 @@ import net.fabricmc.mapping.reader.v2.TinyMetadata;
 
 final class Metadata implements TinyMetadata {
 
-  private static final List<String> NAMESPACES = Collections.unmodifiableList(Arrays.asList("official", "intermediary", "named"));
+  private static final List<String> NAMESPACES = Collections.unmodifiableList(Arrays.asList("official", "searge", "intermediary", "named"));
 
   @Override
   public int getMajorVersion() {
