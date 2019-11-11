@@ -101,7 +101,7 @@ public final class IntermediaryWorker {
           }
 
           for (MethodDef methodDef : classDef.getMethods()) {
-            if (Objects.equals(methodDef.getName("official"), obf)) {
+            if (Objects.equals(methodDef.getName("official"), obf) && Objects.equals(methodDef.getDescriptor("official"), mcpMethod.getDescriptor("official"))) {
               mcpMethod.setIntermediary(methodDef.getName("intermediary"));
               break;
             }
