@@ -39,8 +39,15 @@ public class McpTinyExtension {
     this.plugin = plugin;
   }
 
-  public Dependency makeMcpDependency(String mcVersion, String mcpVersion) {
-    return plugin.makeDependency(project, mcVersion, mcpVersion);
+  /**
+   * Creates a dependency on a specified MCP mapping.
+   *
+   * @param mcVersion the target Minecraft version
+   * @param mcpVersion the target MCP snapshot version
+   * @return the created dependency
+   */
+  public Dependency mcp(String mcVersion, String mcpVersion) {
+    return plugin.makeMapping(project, mcVersion, mcpVersion);
   }
 //    http://export.mcpbot.bspk.rs/mcp_snapshot_nodoc/20191108-1.14.3/mcp_snapshot_nodoc-20191108-1.14.3.zip
 //    http://export.mcpbot.bspk.rs/mcp_snapshot/20191108-1.14.3/mcp_snapshot-20191108-1.14.3.zip

@@ -91,8 +91,25 @@ public final class TinyPrinter {
       sb.append('\t');
     }
     sb.append('c').append('\t');
-    sb.append(comment);
+    sb.append(escapeComment(comment));
     stream.println(sb);
   }
+
+  private static String escapeComment(String old) {
+    StringBuilder sb = new StringBuilder(old.length());
+    for (int i = 0; i < old.length(); i++) {
+      char c = old.charAt(i);
+      int t = TO_ESCAPE.indexOf(c);
+      if (t == -1) {
+        sb.append(c);
+      } else {
+        sb.append('\\').append(ESCAPED.charAt(t));
+      }
+    }
+    return sb.toString();
+  }
+
+  private static final String TO_ESCAPE = "\\\n\r\0\t";
+  private static final String ESCAPED = "\\nr0t";
 
 }

@@ -58,14 +58,10 @@ final class Metadata implements TinyMetadata {
 
   @Override
   public int index(String s) throws IllegalArgumentException {
-    switch (s) {
-      case "official":
-        return 0;
-      case "intermediary":
-        return 1;
-      case "named":
-        return 2;
+    int t = NAMESPACES.indexOf(s);
+    if (t == -1) {
+      throw new IllegalArgumentException("Unknown namespace " + s);
     }
-    throw new IllegalArgumentException("Unknown namespace " + s);
+    return t;
   }
 }

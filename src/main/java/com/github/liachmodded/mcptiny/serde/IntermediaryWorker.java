@@ -100,9 +100,9 @@ public final class IntermediaryWorker {
             continue; // inherited etc
           }
 
-          for (MethodDef fieldDef : classDef.getMethods()) {
-            if (Objects.equals(fieldDef.getName("official"), obf)) {
-              mcpMethod.setIntermediary(fieldDef.getName("intermediary"));
+          for (MethodDef methodDef : classDef.getMethods()) {
+            if (Objects.equals(methodDef.getName("official"), obf)) {
+              mcpMethod.setIntermediary(methodDef.getName("intermediary"));
               break;
             }
           }

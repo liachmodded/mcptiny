@@ -27,11 +27,14 @@
 package com.github.liachmodded.mcptiny.model;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import net.fabricmc.mapping.reader.v2.TinyMetadata;
 import net.fabricmc.mapping.tree.ClassDef;
 import net.fabricmc.mapping.tree.TinyTree;
+import net.fabricmc.mapping.util.ClassMapper;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class McpTree implements TinyTree {
@@ -43,23 +46,31 @@ public final class McpTree implements TinyTree {
   private final Map<String, McpField> fieldMap = new TreeMap<>(); // field_123456 -> xx; a -> RED
   private final Map<String, McpMethod> methodMap = new TreeMap<>(); // func_123456 -> xx; func_i2345 -> xx; equals -> equals
 
+  private final Map<String, String> obfToInt = new HashMap<>();
+  private final Map<String, String> srgToObf = new HashMap<>();
+  private final ClassMapper intMapper = new ClassMapper(this.obfToInt);
+  private final ClassMapper srgToObfMapper = new ClassMapper(this.srgToObf);
+
   public McpClass makeClass(String obf, String srg) {
-    McpClass created = new McpClass(obf, srg);
+    McpClass created = new McpClass(obf, srg, this.obfToInt);
     obfMap.put(obf, created);
     srgMap.put(srg, created);
+    this.srgToObf.put(srg, obf);
     return created;
   }
 
   public McpField makeField(McpClass parent, String obf, String desc, String srg) {
-    McpField created = new McpField(obf, srg, desc);
+    McpField created = new McpField(obf, srg, desc, intMapper);
     fieldMap.put(fixName(srg), created);
     parent.getMcpFields().add(created);
     return created;
   }
 
   public McpMethod makeOrGetMethod(McpClass parent, String obf, String desc, String srg) {
-    McpMethod ret = methodMap.computeIfAbsent(fixName(srg), s -> new McpMethod(obf, srg, desc));
-    parent.getMcpMethods().add(ret);
+    McpMethod ret = methodMap.computeIfAbsent(fixName(srg), s -> new McpMethod(obf, srg, desc, intMapper));
+    if (!parent.getMcpMethods().contains(ret)) {
+      parent.getMcpMethods().add(ret);
+    }
     return ret;
   }
 
@@ -97,13 +108,28 @@ public final class McpTree implements TinyTree {
     return current;
   }
 
-  public McpMethod makeConstructor(String index, String owner, String desc) {
+  public McpMethod makeConstructor(String index, String owner, String srgDesc) {
     McpClass parent = getMcpClass(owner);
 
-    McpMethod created = new McpMethod("<init>", "<init>", desc);
-    methodMap.put("func_i" + index, created);
-    parent.getMcpMethods().add(created);
-    return created;
+    String desc = srgToObfMapper.mapDescriptor(srgDesc);
+
+    @Nullable McpMethod target = null;
+    for (McpMethod parentMethod : parent.getMcpMethods()) {
+      if (Objects.equals(parentMethod.getSrg(), "<init>") && Objects.equals(desc, parentMethod.getDescriptor("official"))) {
+        target = parentMethod;
+        break;
+      }
+    }
+
+    McpMethod result;
+    if (target == null) {
+      result = new McpMethod("<init>", "<init>", desc, intMapper);
+      parent.getMcpMethods().add(result);
+    } else {
+      result = target;
+    }
+    methodMap.put("func_i" + index, result);
+    return result;
   }
 
   public McpField findField(String srg) {

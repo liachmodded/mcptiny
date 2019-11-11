@@ -33,14 +33,15 @@ import java.util.TreeMap;
 import net.fabricmc.mapping.tree.LocalVariableDef;
 import net.fabricmc.mapping.tree.MethodDef;
 import net.fabricmc.mapping.tree.ParameterDef;
+import net.fabricmc.mapping.util.ClassMapper;
 
 public final class McpMethod extends McpDescriptored implements MethodDef {
 
   private final NavigableMap<Integer, McpParam> mcpParams = new TreeMap<>();
   private boolean staticModifier = false;
 
-  public McpMethod(String obf, String srg, String obfDesc) {
-    super(obf, srg, obfDesc);
+  public McpMethod(String obf, String srg, String obfDesc, ClassMapper intMapper) {
+    super(obf, srg, obfDesc, intMapper);
   }
 
   public NavigableMap<Integer, McpParam> getMcpParams() {

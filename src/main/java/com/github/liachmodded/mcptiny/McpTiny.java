@@ -40,6 +40,7 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.gradle.api.Plugin;
@@ -47,7 +48,7 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.ModuleIdentifier;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.file.FileTree;
@@ -63,7 +64,7 @@ public class McpTiny implements Plugin<Project> {
     target.getExtensions().create("mcptiny", McpTinyExtension.class, target, this);
   }
 
-  Dependency makeDependency(Project project, String mcVersion, String mcpVersion) {
+  Dependency makeMapping(Project project, String mcVersion, String mcpVersion) {
     RepositoryHandler repositories = project.getRepositories();
     repositories.maven(repo -> {
       repo.setName("forge");
@@ -102,9 +103,31 @@ public class McpTiny implements Plugin<Project> {
 
     System.err.printf("Tiny jar built, ready at \"%s\".", resultTinyJar);
 
-    ModuleIdentifier moduleIdentifier = DefaultModuleIdentifier.newId("de.oceanlabs.mcp", "mcp_snapshot");
-    return new DefaultSelfResolvingDependency(new DefaultModuleComponentIdentifier(moduleIdentifier, mcpVersion),
-        (FileCollectionInternal) project.files(resultTinyJar));
+    int t = mcpVersion.indexOf('-');
+    final ModuleComponentIdentifier moduleComponentIdentifier = new DefaultModuleComponentIdentifier(
+        DefaultModuleIdentifier.newId("de.oceanlabs.mcp", "mcp_snapshot"),
+        mcVersion + "+build." + (t < 0 ? mcpVersion : mcpVersion.substring(0, t))); // Yep fabric yarn build notation is weird
+    return new DefaultSelfResolvingDependency(moduleComponentIdentifier, (FileCollectionInternal) project.files(resultTinyJar)) {
+      @Override
+      public String getGroup() {
+        return moduleComponentIdentifier.getGroup();
+      }
+
+      @Override
+      public String getName() {
+        return moduleComponentIdentifier.getModule();
+      }
+
+      @Override
+      public String getVersion() {
+        return moduleComponentIdentifier.getVersion();
+      }
+
+      @Override
+      public Set<File> resolve() {
+        return super.resolve();
+      }
+    };
   }
 
   private McpTree handleSrgZip(Project project, File srgZip) {
@@ -163,7 +186,7 @@ public class McpTiny implements Plugin<Project> {
     File dir = new File(project.getBuildDir(), "tmp");
     dir.mkdirs();
     File tmpFile = new File(dir, "mcp-tmp.tiny");
-    List<String> namespaces = Collections.unmodifiableList(Arrays.asList("official", "intermediary", "named"));
+    List<String> namespaces = Collections.unmodifiableList(Arrays.asList("intermediary", "named"));
     try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(tmpFile.toPath()))) {
       TinyPrinter.print(writer, tree, namespaces);
     } catch (IOException ex) {

@@ -27,10 +27,11 @@
 package com.github.liachmodded.mcptiny.model;
 
 import net.fabricmc.mapping.tree.FieldDef;
+import net.fabricmc.mapping.util.ClassMapper;
 
 public final class McpField extends McpDescriptored implements FieldDef {
 
-  public McpField(String obf, String srg, String obfDesc) {
-    super(obf, srg, obfDesc);
+  public McpField(String obf, String srg, String obfDesc, ClassMapper intMapper) {
+    super(obf, srg, obfDesc, intMapper);
   }
 }

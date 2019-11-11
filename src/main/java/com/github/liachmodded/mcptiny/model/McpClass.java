@@ -28,17 +28,28 @@ package com.github.liachmodded.mcptiny.model;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import net.fabricmc.mapping.tree.ClassDef;
 import net.fabricmc.mapping.tree.FieldDef;
 import net.fabricmc.mapping.tree.MethodDef;
+import net.fabricmc.mapping.util.ClassMapper;
 
 public final class McpClass extends McpMapped implements ClassDef {
 
   private final Collection<McpField> mcpFields = new ArrayList<>();
   private final Collection<McpMethod> mcpMethods = new ArrayList<>();
+  
+  private final Map<String, String> obfToIntMap;
 
-  public McpClass(String obf, String srg) {
+  public McpClass(String obf, String srg, Map<String, String> obfToIntMap) {
     super(obf, srg);
+    this.obfToIntMap = obfToIntMap;
+  }
+
+  @Override
+  public void setIntermediary(String intermediary) {
+    super.setIntermediary(intermediary);
+    this.obfToIntMap.put(getObf(), intermediary);
   }
 
   public Collection<McpField> getMcpFields() {

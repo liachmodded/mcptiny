@@ -60,7 +60,7 @@ abstract class McpMapped implements Mapped {
   }
 
   protected String getIntermediaryChecked() {
-    return Objects.requireNonNull(intermediary);
+    return Objects.requireNonNull(intermediary, srg + " has no int mapping!");
   }
 
   public String getObf() {

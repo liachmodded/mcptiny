@@ -28,14 +28,17 @@ package com.github.liachmodded.mcptiny.model;
 
 import java.util.Objects;
 import net.fabricmc.mapping.tree.Descriptored;
+import net.fabricmc.mapping.util.ClassMapper;
 
 abstract class McpDescriptored extends McpMapped implements Descriptored {
 
   private String obfDesc;
+  private final ClassMapper intMapper;
 
-  McpDescriptored(String obf, String srg, String obfDesc) {
+  McpDescriptored(String obf, String srg, String obfDesc, ClassMapper intMapper) {
     super(obf, srg);
     this.obfDesc = obfDesc;
+    this.intMapper = intMapper;
   }
 
   public void setObfDesc(String obfDesc) {
@@ -47,6 +50,9 @@ abstract class McpDescriptored extends McpMapped implements Descriptored {
     if (Objects.equals("official", s)) {
       return obfDesc;
     }
-    throw new UnsupportedOperationException("TODO"); //todo
+    if (Objects.equals("intermediary", s)) {
+      return intMapper.mapDescriptor(obfDesc);
+    }
+    throw new UnsupportedOperationException("Unsupported namespace \"" + s + "\" for descriptor");
   }
 }
